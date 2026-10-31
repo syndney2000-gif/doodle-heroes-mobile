@@ -1,7 +1,10 @@
+import { emptyGames, decodeGames, gameRecords } from './mobileGames';
 import { localDateKey } from './lib/rng';
 import { cluesFor, solveGrid, UNKNOWN, FILLED, EMPTY } from './nonogram/solver';
 export const emptyProgress = () => ({
   version: 1,
+  games: emptyGames(),
+  lastGame: null,
   sessions: {},
   activeId: null,
   reducedMotion: false
@@ -104,10 +107,13 @@ export function decodeProgress(raw) {
   }
   progress.activeId = typeof data.activeId === 'string' && Object.hasOwn(progress.sessions, data.activeId) ? data.activeId : null;
   progress.reducedMotion = data.reducedMotion === true;
+  progress.games = decodeGames(data.games);
+  progress.lastGame = ['bridges', 'net', 'guess', 'merge', 'siege'].includes(data.lastGame) ? data.lastGame : null;
   return progress;
 }
 export function streakFor(progress, today) {
-  const days = new Set(Object.values(progress.sessions).filter(s => s.completedAt).map(s => localDateKey(new Date(s.completedAt))));
+  const dates = [...Object.values(progress.sessions).filter(s => s.completedAt).map(s => s.completedAt), ...gameRecords(progress.games || emptyGames()).map(r => r.date)];
+  const days = new Set(dates.map(date => localDateKey(new Date(date))));
   const date = new Date(`${today}T12:00:00Z`);
   if (!days.has(today)) date.setUTCDate(date.getUTCDate() - 1);
   let streak = 0;

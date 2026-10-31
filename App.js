@@ -1,10 +1,17 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   AccessibilityInfo, ActivityIndicator, Alert, Animated, AppState, BackHandler,
   Modal, Pressable, ScrollView, StyleSheet, Switch, Text, View,
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Island from './src/components/Island';
+import LogicGame from './src/games/LogicGames';
+import DoodleGuess from './src/games/DoodleGuess';
+import MarginMerge from './src/games/MarginMerge';
+import ScribbleSiege from './src/games/ScribbleSiege';
+import { gameRecords } from './src/core/mobileGames';
+
+
 import SketchBoard from './src/components/SketchBoard';
 import useProgress from './src/useProgress';
 import { colors as C } from './src/theme';
@@ -14,6 +21,14 @@ import { localDateKey } from './src/core/lib/rng';
 import { formatTime, starsFor, starText } from './src/core/lib/scoring';
 import { applyCells, hint, newSession, streakFor, undo } from './src/core/session';
 import { FILLED, EMPTY, UNKNOWN } from './src/core/nonogram/solver';
+
+const EXTRA_GAMES = {
+  bridges: { title: 'Isle Spans', icon: '⌁', copy: 'Twelve bridge maps + a local daily', component: LogicGame },
+  net: { title: 'Lighthouse Wiring', icon: '☼', copy: 'Twelve networks + a local daily', component: LogicGame },
+  guess: { title: 'Doodle Guess', icon: '✎', copy: 'One mystery drawing every day', component: DoodleGuess },
+  merge: { title: 'Margin Merge', icon: '✧', copy: 'Draw, combine, fill orders and discover', component: MarginMerge },
+  siege: { title: 'Scribble Siege', icon: '⚔', copy: 'Heroes, upgrades and ten-minute survival', component: ScribbleSiege },
+};
 
 function Button({ children, onPress, secondary, disabled, small, selected, accessibilityLabel }) {
   return <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel}
@@ -61,7 +76,7 @@ function NativeApp() {
   const completed = progress ? Object.values(progress.sessions).filter(s => s.completedAt) : [];
   const completedCatalogue = completed.filter(s => allPuzzles.some(p => p.id === s.puzzle.id)).length;
   const nextPuzzle = allPuzzles.find(p => !progress?.sessions[p.id]?.completedAt) || allPuzzles[0];
-  const back = () => { setScreen(screen === 'play' ? 'library' : 'home'); setMessage(''); };
+  const back = () => { setScreen(screen === 'play' || EXTRA_GAMES[screen] ? 'library' : 'home'); setMessage(''); };
 
   useEffect(() => {
     AccessibilityInfo.isReduceMotionEnabled().then(setSystemReduced);
@@ -71,7 +86,7 @@ function NativeApp() {
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
       if (tutorial) { setTutorial(false); return true; }
-      if (screen === 'home') return false;
+      if (screen === 'home' || EXTRA_GAMES[screen]) return false;
       back(); return true;
     });
     return () => subscription.remove();
@@ -109,8 +124,15 @@ function NativeApp() {
     return () => { clearInterval(clock); subscription.remove(); flush(); };
   }, [screen, session?.puzzle.id, !!session?.completedAt, tutorial, update]);
 
+  const saveGame = useCallback((id, data) => {
+    update(p => ({ ...p, games: { ...p.games, [id]: data } }));
+  }, [update]);
+  function openGame(id) {
+    update(p => ({ ...p, lastGame: id }));
+    setScreen(id);
+  }
   function openPuzzle(puzzle) {
-    update(p => ({ ...p, activeId: puzzle.id, sessions: { ...p.sessions, [puzzle.id]: p.sessions[puzzle.id] || newSession(puzzle) } }));
+    update(p => ({ ...p, lastGame: null, activeId: puzzle.id, sessions: { ...p.sessions, [puzzle.id]: p.sessions[puzzle.id] || newSession(puzzle) } }));
     setMode(FILLED); setHintLine(null); setMessage(''); setZoom(false); setScreen('play');
   }
   function openDaily() {
@@ -140,16 +162,27 @@ function NativeApp() {
   if (store.error) return <SafeAreaView style={S.safe}><View style={S.center}><Text style={S.title}>Let’s protect your progress.</Text><Text style={S.body}>{store.error}</Text><Button onPress={store.retry}>Retry loading</Button><Button secondary onPress={requestReset}>Reset saved progress</Button></View></SafeAreaView>;
   if (!progress) return <SafeAreaView style={S.safe}><View style={S.center}><ActivityIndicator color={C.green} size="large" /><Text style={S.body}>Opening your little world…</Text></View></SafeAreaView>;
 
+  const extra = EXTRA_GAMES[screen];
+  if (extra) {
+    const Component = extra.component;
+    return <SafeAreaView style={S.safe} edges={['top', 'bottom', 'left', 'right']}>
+      {store.saveError && <Pressable accessibilityRole="button" onPress={store.retrySave} style={S.saveError}><Text style={S.smallBold}>{store.saveError} Tap to retry.</Text></Pressable>}
+      <Component key={screen} kind={screen} initial={progress.games[screen]} onSave={data => saveGame(screen, data)} onExit={() => setScreen('library')} reducedMotion={reducedMotion} today={today} />
+    </SafeAreaView>;
+  }
+  const otherRecords = gameRecords(progress.games);
   const home = <>
     <View style={S.top}><Text style={S.brand}>doodle heroes<Text style={{ color: C.gold }}> ✳</Text></Text><Pressable accessibilityRole="button" accessibilityLabel="Open settings" onPress={() => setScreen('settings')} style={S.avatar}><Text style={S.avatarText}>✿</Text></Pressable></View>
     <Text style={[S.eyebrow, { marginTop: 25 }]}>YOUR POCKET-SIZED HAPPY PLACE</Text>
     <Text style={S.hero}>A little wonder.{"\n"}One tile at a time.</Text>
     <Text style={S.body}>Your island escape, with a softer touch.</Text>
     <View style={S.islandCard}><Island reducedMotion={reducedMotion} /><View style={S.chapterBadge}><Text style={S.badgeText}>✦ THE LANTERN ISLES</Text></View></View>
-    <Button onPress={() => openPuzzle(session && !session.completedAt ? session.puzzle : nextPuzzle)}>
-      {session && !session.completedAt ? 'Continue your adventure' : 'Start a little adventure'}  →
+    <Button onPress={() => progress.lastGame ? openGame(progress.lastGame) : openPuzzle(session && !session.completedAt ? session.puzzle : nextPuzzle)}>
+      {progress.lastGame || (session && !session.completedAt) ? 'Continue your adventure' : 'Start a little adventure'}  →
     </Button>
-    <Text style={S.caption}>{session && !session.completedAt ? session.puzzle.title : nextPuzzle.title} · Island Sketch</Text>
+    <Text style={S.caption}>{progress.lastGame ? EXTRA_GAMES[progress.lastGame].title : `${session && !session.completedAt ? session.puzzle.title : nextPuzzle.title} · Island Sketch`}</Text>
+    <SectionTitle detail="SIX WAYS TO PLAY">Your little worlds</SectionTitle>
+    <View style={S.gameGrid}><Pressable accessibilityRole="button" onPress={() => openPuzzle(session && !session.completedAt ? session.puzzle : nextPuzzle)} style={S.gameCard}><Text style={S.puzzleGlyph}>▧</Text><Text style={S.smallBold}>Island Sketch</Text></Pressable>{Object.entries(EXTRA_GAMES).map(([id, info]) => <Pressable key={id} accessibilityRole="button" onPress={() => openGame(id)} style={S.gameCard}><Text style={S.puzzleGlyph}>{info.icon}</Text><Text style={S.smallBold}>{info.title}</Text></Pressable>)}</View>
     <SectionTitle detail="TODAY">A fresh little challenge</SectionTitle>
     <Pressable accessibilityRole="button" accessibilityLabel="Play today’s daily Island Sketch" onPress={openDaily} style={({ pressed }) => [S.dailyCard, pressed && { opacity: 0.7 }]}>
       <TileIcon /><View style={{ flex: 1 }}><Text style={S.cardTitle}>Island Sketch</Text><Text style={S.cardCopy}>Find the picture in the pastels.</Text><Text style={S.chip}>10 × 10 · Daily logic</Text></View><Text style={S.arrow}>↗</Text>
@@ -159,7 +192,9 @@ function NativeApp() {
   </>;
 
   const library = <>
-    <Text style={S.eyebrow}>YOUR LITTLE COLLECTION</Text><Text style={S.hero}>Find your{"\n"}kind of play.</Text><Text style={S.body}>Island Sketch is ready to explore. More games are on their way.</Text>
+    <Text style={S.eyebrow}>YOUR LITTLE COLLECTION</Text><Text style={S.hero}>Find your{"\n"}kind of play.</Text><Text style={S.body}>Six single-player worlds. Play, pause, and pick up right where you left off.</Text>
+    {Object.entries(EXTRA_GAMES).map(([id, info]) => <Pressable accessibilityRole="button" key={id} onPress={() => openGame(id)} style={S.puzzleRow}><View style={S.puzzleIcon}><Text style={S.puzzleGlyph}>{info.icon}</Text></View><View style={{ flex: 1 }}><Text style={S.cardTitle}>{info.title}</Text><Text style={S.cardCopy}>{info.copy}</Text></View><Text style={S.arrow}>→</Text></Pressable>)}
+    <SectionTitle detail="12 SKETCHES + DAILY">Island Sketch</SectionTitle>
     <Button onPress={openDaily}>Today’s daily sketch  ✦</Button>
     {chapters.map(chapter => <View key={chapter.id}>
       <SectionTitle detail={`${chapter.puzzles.length} SKETCHES`}>{chapter.title}</SectionTitle>
@@ -172,8 +207,7 @@ function NativeApp() {
         </Pressable>;
       })}
     </View>)}
-    <SectionTitle detail="IN DEVELOPMENT">Next on the island</SectionTitle>
-    {['Isle Spans · bridge-building logic', 'Lighthouse Wiring · rotating tiles', 'Doodle Guess · a daily mystery', 'Margin Merge · combine and discover', 'Scribble Siege · action survival'].map(name => <View style={S.upcoming} key={name}><Text style={S.cardCopy}>{name}</Text><Text style={S.eyebrow}>SOON</Text></View>)}
+
   </>;
 
   const play = session && <>
@@ -206,6 +240,10 @@ function NativeApp() {
     {[['First light', 'Finish your first sketch', completed.length >= 1], ['A page of wonders', 'Complete all four Shore sketches', chapters[0].puzzles.every(p => progress.sessions[p.id]?.completedAt)], ['A thoughtful start', 'Finish a sketch without hints', completed.some(s => !s.hints)]].map(([title, copy, earned]) => <View key={title} style={S.puzzleRow}><View style={S.puzzleIcon}><Text style={[S.puzzleGlyph, !earned && { opacity: 0.25 }]}>{earned ? '✦' : '○'}</Text></View><View><Text style={S.cardTitle}>{title}</Text><Text style={S.cardCopy}>{earned ? 'Earned · ' : ''}{copy}</Text></View></View>)}
     <SectionTitle detail={`${completed.length} COMPLETE`}>Your discoveries</SectionTitle>
     {completed.length ? completed.map(s => <Pressable accessibilityRole="button" key={s.puzzle.id} style={S.puzzleRow} onPress={() => openPuzzle(s.puzzle)}><View style={{ flex: 1 }}><Text style={S.cardTitle}>{s.puzzle.title}</Text><Text style={S.cardCopy}>{formatTime(s.seconds)} · {s.hints} hints</Text></View><Text style={S.starsSmall}>{starText(starsFor(s.hints))}</Text></Pressable>) : <Text style={S.body}>Solve a sketch to add its picture to your journal.</Text>}
+    <SectionTitle detail={`${otherRecords.length} RECORDS`}>Across your little worlds</SectionTitle>
+    {otherRecords.map(record => <View key={record.id} style={S.puzzleRow}><View style={{ flex: 1 }}><Text style={S.cardTitle}>{record.title}</Text><Text style={S.cardCopy}>{record.game}</Text></View><Text style={S.starsSmall}>{starText(record.stars)}</Text></View>)}
+    {progress.games.merge && <View style={S.helpCard}><Text style={S.body}>Margin Merge · level {progress.games.merge.level} · {progress.games.merge.discovered.length}/32 discoveries · {progress.games.merge.delivered} orders delivered</Text></View>}
+    {!otherRecords.length && <Text style={S.body}>Your next bridge, network or doodle discovery will appear here.</Text>}
     <Button secondary onPress={() => setScreen('settings')}>Settings and accessibility</Button>
   </>;
 
@@ -213,11 +251,11 @@ function NativeApp() {
     <Text style={S.eyebrow}>MAKE YOURSELF AT HOME</Text><Text style={S.hero}>Your pace.{"\n"}Your little world.</Text>
     <View style={S.setting}><View style={{ flex: 1 }}><Text style={S.cardTitle}>Reduce motion</Text><Text style={S.cardCopy}>Keep the island still and simplify transitions.</Text></View><Switch accessibilityLabel="Reduce motion" value={progress.reducedMotion} onValueChange={value => update(p => ({ ...p, reducedMotion: value }))} trackColor={{ false: C.line, true: '#9CB48A' }} thumbColor={C.white} /></View>
     {systemReduced && <Text style={S.cardCopy}>Your device’s reduced-motion preference is also respected.</Text>}
-    <View style={S.helpCard}><Text style={S.body}>Everything in this build stays on your device. Island Sketch works without a website, account or internet connection once installed.</Text></View>
+    <View style={S.helpCard}><Text style={S.body}>All six games stay on your device and work without a website, account or internet connection once installed.</Text></View>
     <Text style={S.body}>Daily sketches use your local calendar date. A sketch already in progress keeps its original date when midnight passes.</Text>
     <Button secondary onPress={() => setTutorial(true)}>How to play Island Sketch</Button>
     <Button secondary onPress={requestReset}>Reset mobile progress</Button>
-    <Text style={S.caption}>Meadow Tiles · native milestone 1{"\n"}12 catalogue puzzles + local daily generation{"\n"}The other five games and expedition map are next.</Text>
+    <Text style={S.caption}>Meadow Tiles · six native games{"\n"}36 catalogue puzzles + local daily challenges{"\n"}Multiplayer is excluded. Linked expedition map is planned.</Text>
   </>;
 
   return <SafeAreaView style={S.safe} edges={['top', 'bottom', 'left', 'right']}>
@@ -237,6 +275,7 @@ function NativeApp() {
   </SafeAreaView>;
 }
 const S = StyleSheet.create({
+  gameGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 }, gameCard: { width: '48%', minHeight: 88, borderRadius: 20, padding: 14, backgroundColor: C.white, borderWidth: 1, borderColor: C.line, gap: 7 },
   safe: { flex: 1, backgroundColor: C.paper }, content: { padding: 22, paddingBottom: 32, maxWidth: 620, width: '100%', alignSelf: 'center' },
   center: { flex: 1, padding: 28, justifyContent: 'center', gap: 16 }, top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
   brand: { fontSize: 23, fontWeight: '800', color: C.ink, letterSpacing: -0.8 }, avatar: { width: 46, height: 46, borderRadius: 24, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center' }, avatarText: { fontSize: 24, color: C.ink },

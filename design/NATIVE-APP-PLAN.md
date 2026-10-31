@@ -13,14 +13,16 @@ Scribble Siege, Lantern Isles expedition, daily puzzles, tutorials, settings,
 achievements, and local progress. Exclude Draw Party, rooms, accounts, online
 leaderboards, cloud sync, and advertising from the initial implementation scope.
 
-**Selected direction: 08 — Meadow Tiles.** Native milestone 1 is implemented:
-Home, Island Sketch, catalogue / daily selection, completion, journal, tutorial,
-settings and local persistence. The earlier WebView has been removed. The HTML
-remains a visual study, while `App.js` now renders React Native components.
+**Selected direction: 08 — Meadow Tiles.** All six single-player games are now
+implemented in native React Native screens: Island Sketch, Isle Spans, Lighthouse
+Wiring, Doodle Guess, Margin Merge and Scribble Siege. Home, library, journal,
+tutorials, settings, local saves and native touch controls are connected.
 
-Remaining: the other five games, the linked expedition map, further animation
-polish, device verification, final app assets, and distributable native builds.
-The roadmap below describes the full scope, not a claim that all phases are done.
+Remaining: the linked expedition map, sound/haptics, real-device visual and
+performance verification, final app assets and distributable native builds.
+The roadmap below is retained as architecture guidance. Native implementation is
+covered by 104 tests and Android/iOS Metro exports; these do not replace hardware
+verification. See README for exact current functionality and limits.
 
 ## 1. Choose the visual direction
 

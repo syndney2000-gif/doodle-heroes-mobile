@@ -4,20 +4,36 @@ Native Expo / React Native app for Android and iOS, using selected design **08**
 There is no WebView or website connection. The existing Astro website remains
 separate in the parent directory.
 
-## Implemented: milestone 1
+## Six playable native games
 
-- Meadow Tiles home: animated SVG island, forest-green controls, pastel tiles.
-- Island Sketch: all 12 catalogue puzzles in three chapters, plus a deterministic
-  10 × 10 daily sketch generated entirely on the device.
-- Number clues, tap / drag strokes, fill / mark / erase, undo, clear, solver hints.
-- Completion detection, stars, journal, local streak and three milestones.
-- Saved boards, undo history, hints, time, completion and reduced-motion setting.
-- Foreground play timer, Android back handling, tutorial and larger-cell mode.
-- Storage error recovery, retry, and an explicit confirmed reset.
-- System reduced-motion preference plus an in-app option.
+The selected design is **08 — Meadow Tiles**: ivory, forest green, pastel tiles,
+rounded controls and an illustrated island. All game screens use native React
+Native controls and SVG. No WebView, website server, API key or account is used.
 
-The other five games and the linked expedition map are still planned. The game
-library labels them as in development; it does not pretend they are playable.
+| Game | Implemented |
+| --- | --- |
+| Island Sketch | 12 puzzles + daily generation; drag fill/mark/erase, undo, hints, stars |
+| Isle Spans | 12 maps + daily; two-tap bridge construction, double bridges, crossing checks, undo, solver hints |
+| Lighthouse Wiring | 12 grids + daily; animated rotation, tile locking, powered-network feedback, undo, solver hints |
+| Doodle Guess | Daily stroke reveal, word suggestions, six guesses, category hint, saved result and native sharing |
+| Margin Merge | 6 × 7 board; tap or drag to move/merge, orders, experience, chain unlocks, offline ink, 32-item book |
+| Scribble Siege | Ten-minute fixed-step combat, floating joystick and directional controls, six weapons, passives, level-ups, boss, daily twists, hero unlocks, upgrades, custom hero drawing and idle coin jar |
+
+Progress saves locally. Existing Island Sketch saves migrate automatically.
+The journal includes puzzle results, daily guesses, Siege records and merge
+collection stats. Daily puzzles keep their original dates across midnight.
+Menus, wire turns, merges and doodle reveals animate; system/in-app reduced
+motion is respected. Each game includes a short in-app guide.
+
+Siege pauses when backgrounded or when its help opens. A suspended run saves its
+random state, enemies, projectiles, hit sets, upgrade choices and position; it
+resumes from the lobby. Finished runs bank rewards once. The simulation uses
+60 fixed steps per second and the batched SVG renderer requests up to 30 redraws
+per second; actual device performance remains to be measured.
+
+Multiplayer and the linked expedition map are outside this build. Sound/music
+and haptic effects are not implemented; the games currently play silently.
+Final store assets and native distribution builds remain separate work.
 
 ## Run locally
 
@@ -93,14 +109,19 @@ npm run check
 npx expo export --platform all
 ```
 
-The mobile tests cover stroke undo, immutable completion, hints and conflicts,
-round-trip / damaged saves, deterministic daily generation, streaks, catalogue
-solvability and bounded history. Android and iOS Metro exports validate bundling;
-they do not replace native compilation or device testing.
+The current suite has **104 passing tests**. It includes the reused engine and
+solver tests, native save migration, catalogue/daily checks, bridge connectivity,
+wire locking, merge orders, deterministic Siege resume, reward deduplication and
+malformed-save checks. Screen tests use mocked native views to exercise navigation,
+real game actions, drawing, pause/background handling and Siege reopen/resume.
 
-Still verify on real Android and iOS devices: drag responsiveness, screen-reader
-input, safe areas, large text, board scrolling, background/resume, save reload,
-reduced motion, and airplane-mode cold launch in an installed build.
+Android and iOS Metro exports validate the runtime imports and JavaScript bundles;
+they are not compiled APK/IPA files and do not prove native layout or performance.
+
+Still verify on real phones: touch/drag accuracy, floating joystick, screen-reader
+input, safe areas, large text, keyboard avoidance, board scrolling, background /
+force-close restoration, sustained combat performance, and airplane-mode cold
+launch in an installed build. Hardware visual testing has not been performed.
 
 ## Native build
 
@@ -116,11 +137,12 @@ npx eas-cli@latest build --platform all
 
 ## Sources and next phases
 
-`src/core/nonogram/solver.js` and `puzzles.js` are adapted from the website's
-matching `src/games/nonogram/` files. `daily.js` uses a local relative import.
-`src/core/lib/rng.js` and `scoring.js` are adapted from the website's shared lib.
-Keep those copies aligned when rules or catalogue data change; the mobile package
-has no imports from outside its own directory.
+The pure game modules under `src/core/{nonogram,bridges,net,merge,doodle-guess,survivor}`
+are adapted from the matching website engines, with native JavaScript imports.
+`src/core/survivor/snapshot.js` and `src/core/mobileGames.js` implement native saves
+and actions. Siege uses an equivalent stateful RNG to make snapshots resumable.
+`src/games/` contains the new native screens and SVG rendering. Keep shared rules
+aligned when the website changes; this app imports nothing from outside its repo.
 
 See [design/NATIVE-APP-PLAN.md](design/NATIVE-APP-PLAN.md) for remaining phases and
 [the HTML design preview](https://github.com/syndney2000-gif/doodle-heroes-mobile/blob/design-reference/design/ui-directions.html) for the selected visual study.

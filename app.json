@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "Doodle Heroes",
+    "slug": "doodle-heroes-mobile",
+    "version": "1.0.0",
+    "userInterfaceStyle": "light",
+    "ios": { "supportsTablet": true },
+    "android": {},
+    "platforms": ["android", "ios"]
+  }
+}

@@ -8,12 +8,12 @@ const git = (args, input) => execFileSync('git', args, { input, encoding: 'utf8'
 const manifest = JSON.parse(readFileSync('package.json', 'utf8'));
 const files = new Map();
 for (const filename of git(['ls-files', '-z', '--', 'App.js', 'src']).split('\0').filter(Boolean)) {
-  if (!/\.(js|jsx|ts|tsx|json)$/.test(filename)) throw new Error(`Unexpected app file: ${filename}`);
+  if (!/\.(js|jsx|json)$/.test(filename)) throw new Error(`Unexpected app file: ${filename}`);
   files.set(filename, readFileSync(filename, 'utf8'));
 }
 files.set('package.json', JSON.stringify({ name: manifest.name, version: manifest.version, private: true, dependencies: manifest.dependencies }, null, 2) + '\n');
 files.set('app.json', readFileSync('app.json', 'utf8'));
-files.set('README.md', '# Meadow Tiles · Snack\n\nThis branch contains only the native app source. Use Expo SDK 55.\n\nThe complete project, tests, design previews and development instructions are on main.\nRegenerate this branch from main with npm run snack. Do not edit generated files here.\n');
+files.set('README.md', '# Meadow Tiles · Snack\n\nThis branch contains only the native app source. Use Expo SDK 55.\n\nThe complete project, tests and development instructions are on main; HTML previews are on design-reference.\nRegenerate this branch from main with npm run snack. Do not edit generated files here.\n');
 const root = new Map();
 for (const [filename, contents] of files) {
   const parts = filename.split('/');
@@ -34,7 +34,7 @@ function tree(directory) {
 }
 const nextTree = tree(root);
 let previous;
-try { previous = git(['rev-parse', '--verify', 'refs/heads/snack']); } catch { /* First export. */ }
+try { previous = git(['rev-parse', '--verify', '--quiet', 'refs/heads/snack']); } catch { /* First export. */ }
 if (previous && git(['rev-parse', `${previous}^{tree}`]) === nextTree) {
   console.log('Snack branch already matches app source.'); process.exit(0);
 }

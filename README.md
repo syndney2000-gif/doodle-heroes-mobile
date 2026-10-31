@@ -36,8 +36,10 @@ standalone app. Development previews can require connectivity to load the bundle
 
 ## Expo Snack — GitHub import
 
-Use the app-only **snack** branch. Importing main also imports the HTML design
-preview, which Snack classifies as an asset and currently fails to upload.
+Use the app-only **snack** branch. Runtime source is plain JavaScript because
+Snack's parser rejected a TypeScript interface in the previous import.
+The HTML design preview is preserved on the **design-reference** branch so
+neither main nor snack needs Snack's failing asset-upload path.
 
 1. Open https://snack.expo.dev and choose **Import git repository**.
 2. Enter `https://github.com/syndney2000-gif/doodle-heroes-mobile`.
@@ -53,7 +55,7 @@ https://github.com/syndney2000-gif/doodle-heroes-mobile/tree/snack
 The branch contains App.js, src/, app.json, a short README, and a package.json
 with runtime dependencies only. It excludes HTML, tests, lockfiles, scripts and
 other development material. All artwork is drawn in code, so no asset upload
-is required. Files are copied from the same source, not independently maintained.
+is required. Files are adapted from the same source, not independently maintained.
 
 After changing app source on main, regenerate and push the Snack branch:
 
@@ -114,14 +116,14 @@ npx eas-cli@latest build --platform all
 
 ## Sources and next phases
 
-`src/core/nonogram/solver.ts` and `puzzles.ts` are copied from the website's
-matching `src/games/nonogram/` files. `daily.ts` uses a local relative import.
-`src/core/lib/rng.ts` and `scoring.ts` are copied from the website's shared lib.
+`src/core/nonogram/solver.js` and `puzzles.js` are adapted from the website's
+matching `src/games/nonogram/` files. `daily.js` uses a local relative import.
+`src/core/lib/rng.js` and `scoring.js` are adapted from the website's shared lib.
 Keep those copies aligned when rules or catalogue data change; the mobile package
 has no imports from outside its own directory.
 
 See [design/NATIVE-APP-PLAN.md](design/NATIVE-APP-PLAN.md) for remaining phases and
-[design/ui-directions.html](design/ui-directions.html) for the selected visual study.
+[the HTML design preview](https://github.com/syndney2000-gif/doodle-heroes-mobile/blob/design-reference/design/ui-directions.html) for the selected visual study.
 
 Expo references:
 - https://docs.expo.dev/versions/v55.0.0/

@@ -24,7 +24,7 @@ The roadmap below describes the full scope, not a claim that all phases are done
 
 ## 1. Choose the visual direction
 
-Open `ui-directions.html` directly in a browser. It is one self-contained file,
+Download `design/ui-directions.html` from the `design-reference` branch and open it in a browser. It is one self-contained file,
 with eight mobile design previews (seven home screens and one gameplay screen) and no external dependencies.
 
 | Option | Direction | Best for |

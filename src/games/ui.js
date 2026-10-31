@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { Animated, AppState, BackHandler, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { colors as C } from '../theme';
+const MotionContext = createContext(false);
 
 export const clone = value => JSON.parse(JSON.stringify(value));
 export function useGameState(initial, onSave) {
@@ -42,11 +43,20 @@ export function usePuzzleClock(current, change, active) {
   }, [active, current.current.active, current, change]);
 }
 export function Button({ children, onPress, disabled, secondary, selected, small, label }) {
-  return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: !!disabled, selected: !!selected }} disabled={disabled} onPress={onPress}
-    style={({ pressed }) => [U.button, secondary && U.secondary, small && U.small, selected && U.selected, (pressed || disabled) && { opacity: disabled ? 0.35 : 0.72 }]}>
+  const reducedMotion = useContext(MotionContext);
+  const scale = useRef(new Animated.Value(1)).current;
+  const animatePress = value => {
+    if (reducedMotion) return;
+    Animated.spring(scale, { toValue: value, speed: 35, bounciness: value === 1 ? 5 : 0, useNativeDriver: true }).start();
+  };
+  useEffect(() => { if (disabled || reducedMotion) scale.setValue(1); return () => scale.stopAnimation(); }, [disabled, reducedMotion]);
+  return <Animated.View style={{ transform: [{ scale }] }}><Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: !!disabled, selected: !!selected }} disabled={disabled} onPress={onPress}
+    onPressIn={() => animatePress(0.96)} onPressOut={() => animatePress(1)}
+    style={({ pressed }) => [U.button, secondary && U.secondary, small && U.small, selected && U.selected, (pressed || disabled) && { opacity: disabled ? 0.35 : 0.85 }]}>
     <Text style={[U.buttonText, secondary && { color: C.ink }, selected && { color: C.white }]}>{children}</Text>
-  </Pressable>;
+  </Pressable></Animated.View>;
 }
+
 export function Header({ name, title, onExit, onHelp }) {
   return <View style={U.header}><Button small secondary onPress={onExit} label="Back to games">←</Button><View style={{ flex: 1 }}><Text style={U.eyebrow}>{name.toUpperCase()}</Text><Text style={U.heading}>{title}</Text></View><Button small secondary onPress={onHelp} label={`How to play ${name}`}>?</Button></View>;
 }
@@ -57,12 +67,17 @@ export function Page({ children, name, title, onExit, help, reducedMotion, scrol
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => { exit.current(); return true; });
     return () => subscription.remove();
   }, []);
+  const entrance = useRef(new Animated.Value(reducedMotion ? 1 : 0)).current;
+  useEffect(() => {
+    const animation = Animated.timing(entrance, { toValue: 1, duration: reducedMotion ? 0 : 190, useNativeDriver: true });
+    animation.start(); return () => animation.stop();
+  }, [reducedMotion]);
   const closeHelp = () => { setShowHelp(false); onHelpClose?.(); };
-  return <View style={{ flex: 1 }}>
+  return <MotionContext.Provider value={!!reducedMotion}><Animated.View style={{ flex: 1, opacity: entrance, transform: [{ translateY: entrance.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] }}>
     {scroll ? <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={U.page}><Header name={name} title={title} onExit={onExit} onHelp={() => { onHelpOpen?.(); setShowHelp(true); }} />{children}</ScrollView></KeyboardAvoidingView>
       : <><View style={U.gameHeader}><Header name={name} title={title} onExit={onExit} onHelp={() => { onHelpOpen?.(); setShowHelp(true); }} /></View>{children}</>}
     <Modal visible={showHelp} transparent animationType={reducedMotion ? 'none' : 'fade'} onRequestClose={closeHelp}><View style={U.shade}><View style={U.sheet} accessibilityViewIsModal><ScrollView><Text style={U.hero}>{name}</Text><Text style={U.body}>{help}</Text></ScrollView><Button onPress={closeHelp}>Let’s play</Button></View></View></Modal>
-  </View>;
+  </Animated.View></MotionContext.Provider>;
 }
 export function Notice({ children }) { return children ? <View style={U.notice}><Text accessibilityLiveRegion="polite" style={U.body}>{children}</Text></View> : null; }
 export function Stats({ children }) { return <View style={U.stats}>{children.map((text, i) => <Text key={i} style={U.stat}>{text}</Text>)}</View>; }

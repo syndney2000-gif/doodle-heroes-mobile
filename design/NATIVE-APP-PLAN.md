@@ -21,7 +21,7 @@ tutorials, settings, local saves and native touch controls are connected.
 Remaining: the linked expedition map, sound/haptics, real-device visual and
 performance verification, final app assets and distributable native builds.
 The roadmap below is retained as architecture guidance. Native implementation is
-covered by 104 tests and Android/iOS Metro exports; these do not replace hardware
+covered by 107 tests and Android/iOS Metro exports; these do not replace hardware
 verification. See README for exact current functionality and limits.
 
 ## 1. Choose the visual direction

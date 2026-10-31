@@ -11,7 +11,9 @@
     "check": "expo install --check",
     "export:android": "expo export --platform android",
     "export:ios": "expo export --platform ios",
-    "snack": "node scripts/export-snack.js"
+    "snack": "node scripts/export-snack.js",
+    "preview:export": "node scripts/export-web-preview.js",
+    "test:motion": "node scripts/check-merge-motion.js"
   },
   "dependencies": {
     "expo": "~55.0.0",
@@ -22,6 +24,9 @@
     "react-native-svg": "15.15.3"
   },
   "devDependencies": {
+    "playwright": "1.58.2",
+    "react-dom": "19.2.0",
+    "react-native-web": "0.21.0",
     "react-test-renderer": "19.2.0",
     "vitest": "5.0.3"
   }

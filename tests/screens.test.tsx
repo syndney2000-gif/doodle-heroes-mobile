@@ -1,7 +1,7 @@
 import React from 'react';
 import { act, create } from 'react-test-renderer';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Alert, AppState } from 'react-native';
+import { Alert, Animated, AppState } from 'react-native';
 import App from '../App';
 import LogicGame from '../src/games/LogicGames';
 import DoodleGuess from '../src/games/DoodleGuess';
@@ -23,6 +23,7 @@ const press = async (label, partial = true) => {
 async function mount(component) { await act(async () => { renderer=create(component); }); }
 const base = { today, reducedMotion:true, onExit:vi.fn() };
 beforeEach(async () => {
+  Animated.__hold=false;
   vi.useFakeTimers(); vi.setSystemTime(new Date(today+'T12:00:00Z'));
   globalThis.IS_REACT_ACT_ENVIRONMENT=true;
   vi.stubGlobal('requestAnimationFrame',callback=>setTimeout(()=>callback(Date.now()),16));
@@ -70,6 +71,41 @@ describe('native game screens',()=>{
     const save=vi.fn();await mount(<MarginMerge {...base} initial={initial} onSave={save} />);
     await press('Ink Dot, tier 1, row 1, column 1');await press('Ink Dot, tier 1, row 1, column 2');
     const next=save.mock.calls.at(-1)[0];expect(next.cells[0]).toBeNull();expect(next.cells[1].tier).toBe(2);expect(next.merges).toBe(1);
+  });
+  it('starts a drag before PanResponder has populated x0 and commits the drop once',async()=>{
+    const initial=newState(1,Date.now());initial.cells[0]={chain:'heroes',tier:1};initial.cells[1]={chain:'heroes',tier:1};
+    const save=vi.fn();await mount(<MarginMerge {...base} reducedMotion={false} initial={initial} onSave={save} />);
+    const board=()=>renderer.root.findAllByType('View').find(v=>typeof v.props.onMoveShouldSetPanResponderCapture==='function');
+    const event={nativeEvent:{pageX:25,pageY:25}},gesture={x0:0,y0:0,moveX:55,moveY:25,dx:30,dy:0,numberActiveTouches:1};
+    await act(async()=>board().props.onStartShouldSetPanResponderCapture(event));
+    expect(board().props.onMoveShouldSetPanResponderCapture(event,gesture)).toBe(true);
+    await act(async()=>board().props.onPanResponderGrant(event,gesture));
+    await act(async()=>board().props.onPanResponderMove({nativeEvent:{pageX:75,pageY:25}},{...gesture,moveX:75,dx:50}));
+    await act(async()=>board().props.onPanResponderRelease({nativeEvent:{pageX:75,pageY:25}},{...gesture,moveX:75,dx:50}));
+    const saved=save.mock.calls.at(-1)[0];expect(saved.merges).toBe(1);expect(saved.cells[1].tier).toBe(2);expect(saved.cells[0]).toBeNull();
+    expect(save.mock.calls.filter(([data])=>data.merges===1)).toHaveLength(1);
+  });
+  it('keeps a doodle in its original square when dropped outside the board',async()=>{
+    const initial=newState(1,Date.now());initial.cells[0]={chain:'heroes',tier:1};
+    const save=vi.fn();await mount(<MarginMerge {...base} reducedMotion={false} initial={initial} onSave={save} />);
+    const board=()=>renderer.root.findAllByType('View').find(v=>typeof v.props.onMoveShouldSetPanResponderCapture==='function');
+    await act(async()=>board().props.onStartShouldSetPanResponderCapture({nativeEvent:{pageX:25,pageY:25}}));
+    const gesture={x0:0,y0:0,moveX:40,moveY:25,dx:15,dy:0,numberActiveTouches:1};
+    await act(async()=>board().props.onPanResponderGrant({nativeEvent:{pageX:40,pageY:25}},gesture));
+    await act(async()=>board().props.onPanResponderRelease({nativeEvent:{pageX:-20,pageY:25}},{...gesture,moveX:-20,dx:-45}));
+    expect(save.mock.calls.at(-1)[0].cells).toEqual(initial.cells);expect(save.mock.calls.at(-1)[0].merges).toBe(0);
+  });
+  it('allows rapid merges and saves them before decorative effects complete',async()=>{
+    const initial=newState(1,Date.now());for(const i of [0,1,2,3])initial.cells[i]={chain:'heroes',tier:1};
+    const save=vi.fn();await mount(<MarginMerge {...base} reducedMotion={false} initial={initial} onSave={save} />);
+    Animated.__hold=true;
+    await press('Ink Dot, tier 1, row 1, column 1');await press('Ink Dot, tier 1, row 1, column 2');
+    await press('Ink Dot, tier 1, row 1, column 3');await press('Ink Dot, tier 1, row 1, column 4');
+    const result=save.mock.calls.at(-1)[0];expect(result.merges).toBe(2);expect(result.cells[1].tier).toBe(2);expect(result.cells[3].tier).toBe(2);
+    expect(result).not.toHaveProperty('motion');
+    await act(async()=>{for(const listener of AppState.listeners)listener('background');});
+    expect(save.mock.calls.at(-1)[0].merges).toBe(2);
+    Animated.__hold=false;
   });
   it('starts, pauses, saves, resumes and ends a siege with a single banked reward',async()=>{
     const save=vi.fn();await mount(<ScribbleSiege {...base} initial={emptyGames().siege} onSave={save} />);

@@ -22,8 +22,19 @@ Native controls and SVG. No WebView, website server, API key or account is used.
 Progress saves locally. Existing Island Sketch saves migrate automatically.
 The journal includes puzzle results, daily guesses, Siege records and merge
 collection stats. Daily puzzles keep their original dates across midnight.
-Menus, wire turns, merges and doodle reveals animate; system/in-app reduced
-motion is respected. Each game includes a short in-app guide.
+Menus, wire turns and doodle reveals animate; system/in-app reduced motion is
+respected. Each game includes a short in-app guide.
+
+Margin Merge animates the individual pieces: a lifted ghost follows your finger,
+matching destinations highlight, pieces travel and swap between squares, draws
+spring into place, and merges reveal the upgraded item with a short ring and star
+burst. New discoveries and level-ups have distinct notices. Deliveries fly off
+the board while coin totals and the XP bar update smoothly. Shared game buttons
+have a spring press and game pages enter with a short fade/slide.
+
+Animations are presentation only. Moves and rewards save immediately, rapid
+inputs can interrupt old effects, and a canceled/outside drop changes no cells.
+Reduced motion keeps the same controls and results without flights or particles.
 
 Siege pauses when backgrounded or when its help opens. A suspended run saves its
 random state, enemies, projectiles, hit sets, upgrade choices and position; it
@@ -109,7 +120,7 @@ npm run check
 npx expo export --platform all
 ```
 
-The current suite has **104 passing tests**. It includes the reused engine and
+The current suite has **107 passing tests**. It includes the reused engine and
 solver tests, native save migration, catalogue/daily checks, bridge connectivity,
 wire locking, merge orders, deterministic Siege resume, reward deduplication and
 malformed-save checks. Screen tests use mocked native views to exercise navigation,
@@ -121,7 +132,28 @@ they are not compiled APK/IPA files and do not prove native layout or performanc
 Still verify on real phones: touch/drag accuracy, floating joystick, screen-reader
 input, safe areas, large text, keyboard avoidance, board scrolling, background /
 force-close restoration, sustained combat performance, and airplane-mode cold
-launch in an installed build. Hardware visual testing has not been performed.
+launch in an installed build. Hardware visual testing has not been performed. The merge screen was also checked
+in a real Chromium browser at a phone-sized viewport: drag merge, tap merge,
+spawning, order delivery and level-up completed without runtime errors. This
+browser check supplements the mocked screen tests; it does not measure native
+frame rate.
+
+## Merge animation visual check
+
+For a repeatable browser check of the actual React Native components:
+
+```sh
+npm run preview:export
+npx playwright install chromium  # once, if Chromium is not installed
+npm run test:motion
+```
+
+The exporter uses a temporary project, preserving the app's Android/iOS config.
+The check seeds an isolated browser save, tests a real drag merge, tap merge,
+spawn, delivery and level-up, then checks reduced-motion gameplay. Screenshots
+and a video are written to a temporary directory printed by the runner. They
+are excluded from the source branches and do not trigger Snack asset uploads.
+Set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to use an existing compatible Chromium.
 
 ## Native build
 

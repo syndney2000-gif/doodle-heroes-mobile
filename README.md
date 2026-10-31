@@ -34,19 +34,37 @@ use an SDK-compatible development build or upgrade the project deliberately.
 The development server is not needed once you have built and installed a
 standalone app. Development previews can require connectivity to load the bundle.
 
-## Expo Snack
+## Expo Snack — GitHub import
 
-1. Create a blank project at https://snack.expo.dev with SDK 55 if available.
-2. Copy `App.js` and **every file inside `src/`**, preserving directory names.
-   Pasting only App.js is not sufficient. `snack-source.zip` contains these files
-   and package metadata for convenient extraction and copying.
-3. Add these dependencies, using versions compatible with the selected SDK:
-   - `react-native-safe-area-context` (~5.6.2 for this project)
-   - `react-native-svg` (15.15.3)
-   - `@react-native-async-storage/async-storage` (2.2.0)
-4. Keep Snack's Expo, React and React Native dependency versions matched to its
-   selected SDK. Do not copy node_modules, dist, tests, design files or the lockfile.
-5. Open the preview in Expo Go on Android or iOS. Phone previews are the target.
+Use the app-only **snack** branch. Importing main also imports the HTML design
+preview, which Snack classifies as an asset and currently fails to upload.
+
+1. Open https://snack.expo.dev and choose **Import git repository**.
+2. Enter `https://github.com/syndney2000-gif/doodle-heroes-mobile`.
+3. Open **Show advanced options**, set **Branch name** to `snack`, and leave
+   **Folder path** blank (the project is at the branch root).
+4. Import, then choose Expo SDK 55 and test on Android or iOS with a compatible
+   Expo Go version. If SDK 55 is unavailable, align the project with a supported
+   SDK before testing; do not mix native dependency versions.
+
+You can also paste the branch URL:
+https://github.com/syndney2000-gif/doodle-heroes-mobile/tree/snack
+
+The branch contains App.js, src/, app.json, a short README, and a package.json
+with runtime dependencies only. It excludes HTML, tests, lockfiles, scripts and
+other development material. All artwork is drawn in code, so no asset upload
+is required. Files are copied from the same source, not independently maintained.
+
+After changing app source on main, regenerate and push the Snack branch:
+
+```sh
+npm run snack
+git push origin snack
+```
+
+`npm run snack` updates only the local generated branch; it does not switch your
+checkout or publish anything. Re-import after updates; importing GitHub is a
+snapshot rather than live synchronization.
 
 No API keys, website URL, server or multiplayer setup are needed.
 

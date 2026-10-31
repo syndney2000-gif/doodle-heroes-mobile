@@ -10,7 +10,8 @@
     "test": "vitest run tests",
     "check": "expo install --check",
     "export:android": "expo export --platform android",
-    "export:ios": "expo export --platform ios"
+    "export:ios": "expo export --platform ios",
+    "snack": "node scripts/export-snack.js"
   },
   "dependencies": {
     "expo": "~55.0.0",
